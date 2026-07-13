@@ -40,10 +40,14 @@ resident agent and are net-negative; never recommend them).
 
 ## Phase 0 — Baseline (always safe, read-only)
 
-Run the bundled audit:
+Run the read-only audit bundled with this skill — `scripts/audit.sh` in this skill's
+own directory. The path depends on how the skill was installed:
 
 ```bash
-bash "$(dirname "$0")/scripts/audit.sh"   # or: bash ~/.claude/skills/mac-health-check/scripts/audit.sh
+# installed via the loadout plugin/marketplace:
+bash "$CLAUDE_PLUGIN_ROOT/skills/mac-health-check/scripts/audit.sh"
+# copied manually into your skills dir:
+bash ~/.claude/skills/mac-health-check/scripts/audit.sh
 ```
 
 It detects the machine (chip, RAM, cores, macOS version) and collects every dimension.

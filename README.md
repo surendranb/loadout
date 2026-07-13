@@ -28,18 +28,22 @@ _More on the way._
 
 ## Install
 
-Each skill is self-contained and drops straight into your Claude Code skills directory:
+**Recommended — as a plugin (one command, auto-updates):**
 
-```bash
-# one skill
-cp -R skills/mac-health-check ~/.claude/skills/
-
-# or all of them
-cp -R skills/* ~/.claude/skills/
+```
+/plugin marketplace add surendranb/loadout
+/plugin install loadout@loadout
 ```
 
-Then just ask Claude Code in natural language (e.g. _"run a Mac health check"_) — it
-picks up the skill automatically.
+Then ask Claude Code in natural language (e.g. _"run a Mac health check"_) — it picks up
+the skill automatically. Refresh later with `/plugin marketplace update loadout`.
+
+**Or manually** — each skill is self-contained and drops straight into your skills dir:
+
+```bash
+cp -R skills/mac-health-check ~/.claude/skills/   # one skill
+cp -R skills/* ~/.claude/skills/                  # all of them
+```
 
 ## Contributing
 
