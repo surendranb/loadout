@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+
+# Editor / tooling
+.vscode/
+.idea/
+*.swp
+*~
+
+# Local notes not meant for the repo
+STATE.md
+scratch/
+*.local.md
