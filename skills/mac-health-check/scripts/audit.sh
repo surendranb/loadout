@@ -50,7 +50,12 @@ fi
 
 hr "STARTUP LOAD"
 echo "-- user LaunchAgents (autostart at login) --"
-ls "$HOME/Library/LaunchAgents/"*.plist 2>/dev/null | xargs -n1 basename 2>/dev/null || echo "(none)"
+la_found=0
+for f in "$HOME/Library/LaunchAgents/"*.plist; do
+  [ -e "$f" ] || continue
+  basename "$f"; la_found=1
+done
+[ "$la_found" -eq 0 ] && echo "(none)"
 echo "-- login-item apps --"
 osascript -e 'tell application "System Events" to get the name of every login item' 2>/dev/null || echo "(unavailable)"
 

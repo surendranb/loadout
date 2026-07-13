@@ -1,5 +1,9 @@
 # loadout
 
+[![validate](https://github.com/surendranb/loadout/actions/workflows/validate.yml/badge.svg)](https://github.com/surendranb/loadout/actions/workflows/validate.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
 > The kit you equip your coding agent with — a collection of **universal, agent-agnostic
 > skills** that make Claude Code (and other agent tools) sharper at real work.
 
@@ -45,13 +49,25 @@ cp -R skills/mac-health-check ~/.claude/skills/   # one skill
 cp -R skills/* ~/.claude/skills/                  # all of them
 ```
 
+## Safety
+
+These skills run commands on your machine — so safety is a hard requirement, not a footnote:
+
+- **Read-only by default.** Diagnostics make no changes and are safe to run anytime.
+- **Nothing destructive without your approval** — a skill must show a specific list (with
+  sizes/impact) and wait for your yes before deleting, uninstalling, or reconfiguring.
+- **Your work and managed/corporate config are off-limits** unless you confirm per item.
+
+**You are the final check** — read a skill before you run it. Details in [SECURITY.md](SECURITY.md).
+
 ## Contributing
 
-New skills follow the pattern in [`skills/mac-health-check`](skills/mac-health-check):
-a `SKILL.md` (the method + thresholds + safety contract), an optional `scripts/` dir for
-read-only helpers, and a short `README.md`. Directory names are `lowercase-kebab`,
-domain-or-action first.
+New skills start from [`template/`](template) and must pass `bash scripts/validate.sh`
+(CI runs the same checks: frontmatter, folder-name match, JSON manifests, `shellcheck`).
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the quality bar and the safety contract every
+skill must honor.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE). Provided as-is, without warranty; you run these skills at
+your own risk.

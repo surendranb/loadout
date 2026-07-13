@@ -1,12 +1,6 @@
 ---
 name: mac-health-check
-description: >-
-  Monthly macOS health check and performance optimization for Apple Silicon and
-  Intel Macs. Measures memory, storage, compute/thermals, battery, SSD wear, and
-  startup load; diagnoses the ACTUAL bottleneck (not symptoms); proposes ranked,
-  reversible fixes; never deletes without explicit approval. Use for "check my
-  Mac's health", "optimize my Mac", "why is my Mac slow", "free up disk space",
-  "monthly Mac maintenance", or any Mac performance/longevity request.
+description: Monthly macOS health check and performance optimization for Apple Silicon and Intel Macs. Measures memory, storage, compute and thermals, battery, SSD wear, and startup load; diagnoses the actual bottleneck (not symptoms); proposes ranked, reversible fixes; never deletes without explicit approval. Use for "check my Mac's health", "optimize my Mac", "why is my Mac slow", "free up disk space", "monthly Mac maintenance", or any Mac performance or longevity request.
 ---
 
 # Mac Health Check

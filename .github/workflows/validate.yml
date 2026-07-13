@@ -1,0 +1,19 @@
+name: validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least privilege: this workflow only reads the code.
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      # pinned to a full commit SHA (v4.2.2), never a mutable tag
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Validate skills, manifests, and scripts
+        run: bash scripts/validate.sh
