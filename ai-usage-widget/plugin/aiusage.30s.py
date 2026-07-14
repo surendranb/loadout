@@ -36,7 +36,7 @@ CODEX_SESSIONS = os.path.join(HOME, ".codex", "sessions")
 GEMINI_CHATS_GLOB = os.path.join(HOME, ".gemini", "tmp", "*", "chats", "session-*.json")
 
 DEFAULTS = {
-    "menubar": {"headline": "auto", "label": "AI"},  # headline: auto|claude|<off>
+    "menubar": {"label": "AI", "icon": "gauge.medium"},  # icon = any SF Symbol name
     "thresholds": {"warn": 60, "critical": 85},
     "harnesses": {
         "claude": {"enabled": True, "label": "Claude Code"},
@@ -474,17 +474,19 @@ def main():
     th = cfg["thresholds"]
     H = cfg["harnesses"]
 
-    # headline: highest live window % across statusline-based harnesses.
+    # menu bar: Claude's 5h + 7d (with an icon), colored by the worse window.
+    # Falls back to a single max-% headline across harnesses, then a dash.
     claude = read_claude()
-    headline = None
-    newest_at = 0
+    p5 = p7 = None
     if H.get("claude", {}).get("enabled", True):
         p5, p7 = claude_pcts(claude)
-        for p in (p5, p7):
-            if p is not None:
-                headline = p if headline is None else max(headline, p)
-        if claude and claude.get("rate_limits_at"):
-            newest_at = max(newest_at, claude["rate_limits_at"])
+    headline = None
+    newest_at = 0
+    for p in (p5, p7):
+        if p is not None:
+            headline = p if headline is None else max(headline, p)
+    if claude and claude.get("rate_limits_at"):
+        newest_at = max(newest_at, claude["rate_limits_at"])
     agy = None
     if H.get("antigravity", {}).get("enabled", True):
         agy = read_antigravity()
@@ -494,11 +496,20 @@ def main():
             newest_at = max(newest_at, agy["captured_at"])
 
     stale = newest_at and (time.time() - newest_at) > cfg["stale_minutes"] * 60
-    if headline is not None:
-        col = C["dim"] if stale else color_for(headline, C, th)
-        print(f"{cfg['menubar'].get('label', 'AI')} {headline:.0f}% | color={col}")
+    icon = cfg["menubar"].get("icon", "gauge.medium")
+    col = C["dim"] if (stale or headline is None) else color_for(headline, C, th)
+    if p5 is not None or p7 is not None:
+        segs = []
+        if p5 is not None:
+            segs.append(f"5h {p5:.0f}%")
+        if p7 is not None:
+            segs.append(f"7d {p7:.0f}%")
+        title = " ".join(segs)
+    elif headline is not None:
+        title = f"{cfg['menubar'].get('label', 'AI')} {headline:.0f}%"
     else:
-        print(f"{cfg['menubar'].get('label', 'AI')} — | color={C['dim']}")
+        title = f"{cfg['menubar'].get('label', 'AI')} —"
+    print(f"{title} | sfimage={icon} sfcolor={col} color={col}")
 
     print("---")
 
