@@ -7,9 +7,10 @@ All data is read from **local files only** — no network calls, no credentials,
 ```
 AI 24%                          ← headline: most-constrained live window
 ─────────────────────────────
-Claude Code · Opus 4.8
+Claude Code
 5-hour  ▓▓░░░░░░░░  15%  ↻ in 1h02m
 Weekly  ▓▓░░░░░░░░  24%  ↻ Sat 7 PM
+account-wide, all models
 ─────────────────────────────
 Antigravity
 Gemini 5h      ▓░░░░░░░░░  12%  ↻ in 36m

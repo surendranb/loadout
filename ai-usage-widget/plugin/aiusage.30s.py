@@ -407,7 +407,7 @@ def claude_pcts(claude):
 
 def render_claude(cfg, C, th, hconf):
     claude = read_claude()
-    print(f"{hconf.get('label', 'Claude Code')} · {(claude or {}).get('model', 'Claude') if claude else 'Claude'} | color={C['fg']}")
+    print(f"{hconf.get('label', 'Claude Code')} | color={C['fg']}")
     p5, p7 = claude_pcts(claude)
     if p5 is None and p7 is None:
         print(f"Waiting for an active Claude session… | size=12 color={C['dim']}")
@@ -421,7 +421,7 @@ def render_claude(cfg, C, th, hconf):
             continue
         line = f"{label:7s} {bar(p)} {p:4.0f}%   ↻ {fmt_reset(w.get('resets_at'))}"
         print(f"{line} | font=Menlo size=13 color={color_for(p, C, th)}")
-    print(f"updated {ago(claude.get('rate_limits_at'))} | size=11 color={C['dim']}")
+    print(f"account-wide, all models · updated {ago(claude.get('rate_limits_at'))} | size=11 color={C['dim']}")
 
 
 def render_antigravity(cfg, C, th, hconf, cache):
