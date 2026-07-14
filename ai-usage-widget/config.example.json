@@ -1,0 +1,47 @@
+{
+  "menubar": { "headline": "auto", "label": "AI" },
+  "thresholds": { "warn": 60, "critical": 85 },
+  "stale_minutes": 20,
+
+  "harnesses": {
+    "claude": {
+      "enabled": true,
+      "label": "Claude Code",
+      "chain_command": null
+    },
+
+    "antigravity": {
+      "enabled": true,
+      "label": "Antigravity"
+    },
+
+    "codex": {
+      "enabled": true,
+      "label": "Codex",
+      "window_days": 7,
+      "show_cost": true,
+      "pricing": {
+        "_default": { "in": 1.25, "cached": 0.13, "out": 10.0 },
+        "gpt-5": { "in": 1.25, "cached": 0.13, "out": 10.0 }
+      }
+    },
+
+    "gemini": {
+      "enabled": false,
+      "label": "Gemini CLI",
+      "window_days": 7,
+      "show_cost": true,
+      "pricing": {
+        "_default": { "in": 1.25, "cached": 0.31, "out": 10.0 }
+      }
+    }
+  },
+
+  "colors": {
+    "ok": "#34c759",
+    "warn": "#ff9f0a",
+    "critical": "#ff3b30",
+    "dim": "#8e8e93",
+    "fg": "#e5e5ea"
+  }
+}
