@@ -20,6 +20,7 @@
 #     snapshots so recent activity can lag (a "last active" hint is shown).
 import os
 import re
+import sys
 import json
 import glob
 import time
@@ -532,5 +533,60 @@ def main():
     print("Claude usage docs | href=https://code.claude.com/docs/en/costs")
 
 
+def run_statusline():
+    """`aiusage.py --statusline`: Claude Code invokes this on each status-line
+    refresh with a JSON blob on stdin. We cache its rate_limits for the widget,
+    then print a short status line (chaining any pre-existing command)."""
+    raw = sys.stdin.read()
+    try:
+        d = json.loads(raw)
+    except Exception:
+        print("")
+        return
+    rl = d.get("rate_limits")
+    try:
+        prev = {}
+        if os.path.exists(CLAUDE_CACHE):
+            with open(CLAUDE_CACHE) as f:
+                prev = json.load(f)
+        now = int(time.time())
+        out = {
+            "captured_at": now,
+            "rate_limits": rl if rl else prev.get("rate_limits"),
+            "rate_limits_at": now if rl else prev.get("rate_limits_at"),
+            "model": (d.get("model") or {}).get("display_name") or prev.get("model"),
+        }
+        os.makedirs(os.path.dirname(CLAUDE_CACHE), exist_ok=True)
+        tmp = CLAUDE_CACHE + ".tmp"
+        with open(tmp, "w") as f:
+            json.dump(out, f)
+        os.replace(tmp, CLAUDE_CACHE)
+    except Exception:
+        pass
+    # chain a pre-existing statusLine command, if the installer recorded one
+    try:
+        with open(CONFIG_PATH) as f:
+            chain = ((json.load(f).get("harnesses") or {}).get("claude") or {}).get("chain_command")
+    except Exception:
+        chain = None
+    if chain:
+        try:
+            r = subprocess.run(chain, shell=True, input=raw, capture_output=True, text=True, timeout=5)
+            print(r.stdout.rstrip("\n"))
+            return
+        except Exception:
+            pass
+    model = (d.get("model") or {}).get("display_name") or "Claude"
+    seg = []
+    for key, label in (("five_hour", "5h"), ("seven_day", "7d")):
+        p = ((rl or {}).get(key) or {}).get("used_percentage")
+        if p is not None:
+            seg.append(f"{label} {p:.0f}%")
+    print(f"⚙ {model}" + ("   · " + "  ".join(seg) if seg else ""))
+
+
 if __name__ == "__main__":
-    main()
+    if "--statusline" in sys.argv:
+        run_statusline()
+    else:
+        main()

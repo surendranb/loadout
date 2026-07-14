@@ -39,15 +39,19 @@ There is no single universal "% of limit" — only Claude and Antigravity expose
 
 ## Install
 
+One paste in Terminal:
+
 ```bash
-git clone https://github.com/surendranb/loadout
-cd loadout/ai-usage-widget
-./install.sh
+git clone https://github.com/surendranb/loadout && loadout/ai-usage-widget/install.sh
 ```
 
-The installer: offers to `brew install --cask swiftbar` if needed, copies the plugin + hooks to `~/.config/ai-usage-widget/`, creates `config.json`, and wires Claude Code's `statusLine` (chaining any existing one so nothing is lost). Re-runnable.
+That's it. The installer: installs SwiftBar (via Homebrew) if it's missing, drops a **single** self-contained plugin file into place, points SwiftBar at it, and wires Claude Code's `statusLine` (chaining any existing one so nothing is lost). Re-runnable and reversible (`uninstall.sh`).
+
+No config file is required — the widget runs on sensible defaults. To customize, create `~/.config/ai-usage-widget/config.json` (see `config.example.json`) or use the "Edit config" menu item.
 
 Refresh interval defaults to 30s; override with `AIUSAGE_REFRESH=60s ./install.sh`.
+
+> Why not `curl … | bash`? Piping a remote script straight into a shell runs unreviewed code from the network. This clones the repo first (pinned, inspectable) and runs a local file instead.
 
 ## Configure
 
