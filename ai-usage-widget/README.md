@@ -39,19 +39,24 @@ There is no single universal "% of limit" — only Claude and Antigravity expose
 
 ## Install
 
-One paste in Terminal:
+Grab just this widget — no need to clone all of loadout. Two lines in Terminal:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/surendranb/loadout/main/ai-usage-widget/install.sh
+bash install.sh        # peek at install.sh first if you like — it's ~50 lines
+```
+
+The installer downloads the **single** self-contained plugin file (not the whole repo), installs SwiftBar via Homebrew if it's missing, points SwiftBar at the plugin, and wires Claude Code's `statusLine` (chaining any existing one). Re-runnable and reversible (`uninstall.sh`).
+
+Prefer to clone the repo (e.g. you already use loadout)? That works too:
 
 ```bash
 git clone https://github.com/surendranb/loadout && loadout/ai-usage-widget/install.sh
 ```
 
-That's it. The installer: installs SwiftBar (via Homebrew) if it's missing, drops a **single** self-contained plugin file into place, points SwiftBar at it, and wires Claude Code's `statusLine` (chaining any existing one so nothing is lost). Re-runnable and reversible (`uninstall.sh`).
+No config file is required — the widget runs on sensible defaults. To customize, create `~/.config/ai-usage-widget/config.json` (see `config.example.json`) or use the "Edit config" menu item. Refresh interval defaults to 30s; override with `AIUSAGE_REFRESH=60s`.
 
-No config file is required — the widget runs on sensible defaults. To customize, create `~/.config/ai-usage-widget/config.json` (see `config.example.json`) or use the "Edit config" menu item.
-
-Refresh interval defaults to 30s; override with `AIUSAGE_REFRESH=60s ./install.sh`.
-
-> Why not `curl … | bash`? Piping a remote script straight into a shell runs unreviewed code from the network. This clones the repo first (pinned, inspectable) and runs a local file instead.
+> Why download-then-run instead of `curl … | bash`? Piping a remote script straight into a shell runs unreviewed code from the network. This lands the installer on disk first so you can read it before running.
 
 ## Configure
 

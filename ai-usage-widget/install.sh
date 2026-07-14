@@ -7,6 +7,9 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEST="$HOME/.config/ai-usage-widget"
 PLUGINS="$HOME/Library/Application Support/SwiftBar/Plugins"
 REFRESH="${AIUSAGE_REFRESH:-30s}"
+# Raw source used only when running standalone (installer downloaded on its own,
+# not from a full clone). Lets people install just this widget, not all of loadout.
+RAW_BASE="${AIUSAGE_RAW_BASE:-https://raw.githubusercontent.com/surendranb/loadout/main/ai-usage-widget}"
 
 command -v python3 >/dev/null || { echo "python3 is required."; exit 1; }
 
@@ -19,9 +22,13 @@ if [ ! -d "/Applications/SwiftBar.app" ]; then
   fi
 fi
 
-# 2. Drop the single self-contained plugin file
+# 2. Drop the single self-contained plugin file (from the clone, or fetch it)
 mkdir -p "$DEST" "$PLUGINS"
-cp "$REPO/plugin/aiusage.30s.py" "$DEST/aiusage.py"
+if [ -f "$REPO/plugin/aiusage.30s.py" ]; then
+  cp "$REPO/plugin/aiusage.30s.py" "$DEST/aiusage.py"
+else
+  echo "Fetching plugin…"; curl -fsSL "$RAW_BASE/plugin/aiusage.30s.py" -o "$DEST/aiusage.py"
+fi
 chmod +x "$DEST/aiusage.py"
 ln -sf "$DEST/aiusage.py" "$PLUGINS/aiusage.$REFRESH.py"
 
