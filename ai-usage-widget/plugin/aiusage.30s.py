@@ -24,6 +24,7 @@ import sys
 import json
 import glob
 import time
+import shutil
 import subprocess
 import urllib.request
 import datetime as dt
@@ -58,6 +59,10 @@ DEFAULTS = {
             "show_cost": True,
             "pricing": {"_default": {"in": 1.25, "cached": 0.31, "out": 10.0}},
         },
+        # RTK (Rust Token Killer) proxy savings. Opt-in: shows the *combined*
+        # lifetime gain from `rtk gain` (rtk has no per-harness attribution —
+        # see INTERNALS.md). Silently skipped if the rtk binary isn't on PATH.
+        "rtk": {"enabled": False, "label": "RTK · Token Killer"},
     },
     "colors": {"ok": "#34c759", "warn": "#ff9f0a", "critical": "#ff3b30", "dim": "#8e8e93", "fg": "#e5e5ea"},
     "stale_minutes": 20,
@@ -95,6 +100,13 @@ def human_tokens(n):
     if n >= 1_000:
         return f"{n / 1_000:.1f}K"
     return f"{int(n)}"
+
+
+def human_duration_ms(ms):
+    s = int((ms or 0) / 1000)
+    if s < 60:
+        return f"{s}s"
+    return f"{s // 60}m"
 
 
 def bar(pct, width=10):
@@ -397,6 +409,28 @@ def read_gemini(window_days):
 
 
 # ---------------------------------------------------------------------------
+# RTK — combined token-savings summary from the `rtk gain` proxy analytics.
+# rtk stores every proxied command in one DB with no source/harness column, so
+# this is a single lifetime total across whatever routes through rtk (on this
+# setup that's overwhelmingly the Claude Code hook). Only subprocess-sourced
+# section, so it's guarded hard: no binary → nothing; any error → nothing.
+# ---------------------------------------------------------------------------
+def read_rtk():
+    if not shutil.which("rtk"):
+        return None
+    try:
+        r = subprocess.run(
+            ["rtk", "gain", "-f", "json"],
+            capture_output=True, text=True, timeout=2,
+        )
+        if r.returncode != 0:
+            return None
+        return (json.loads(r.stdout) or {}).get("summary") or None
+    except Exception:
+        return None
+
+
+# ---------------------------------------------------------------------------
 # render sections
 # ---------------------------------------------------------------------------
 def claude_pcts(claude):
@@ -465,6 +499,19 @@ def render_tokens(name, C, hconf, data, note=None):
         print(f"last active {days_ago_str(la)} | size=11 color={C['dim']}")
     if note:
         print(f"{note} | size=11 color={C['dim']}")
+
+
+def render_rtk(cfg, C, hconf, data):
+    # savings is a *good* metric — deliberately green, not run through
+    # color_for() (which reds-out high values for usage pressure).
+    print(f"{hconf.get('label', 'RTK · Token Killer')} | color={C['fg']}")
+    saved = data.get("total_saved", 0) or 0
+    pct = int(data.get("avg_savings_pct", 0) or 0)
+    cmds = int(data.get("total_commands", 0) or 0)
+    exec_ms = data.get("total_time_ms", 0) or 0
+    print(f"Saved   {human_tokens(saved):>7s} tok ({pct}%) | font=Menlo size=13 color={C['ok']}")
+    print(f"{cmds:,} cmds · ~{human_duration_ms(exec_ms)} exec | font=Menlo size=11 color={C['dim']}")
+    print(f"hook-tracked · lifetime | size=11 color={C['dim']}")
 
 
 # ---------------------------------------------------------------------------
@@ -537,6 +584,14 @@ def main():
         gm = read_gemini(H["gemini"].get("window_days", 7))
         render_tokens("gemini", C, H["gemini"], gm, note="No rate-limit remaining exposed by Google")
         first = False
+
+    if H.get("rtk", {}).get("enabled", False):
+        rtk = read_rtk()
+        if rtk:
+            if not first:
+                print("---")
+            render_rtk(cfg, C, H["rtk"], rtk)
+            first = False
 
     print("---")
     print(f"Edit config | bash=open param1={CONFIG_PATH} terminal=false")

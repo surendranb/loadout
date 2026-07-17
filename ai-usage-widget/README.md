@@ -34,6 +34,7 @@ Different tools expose very different things locally. This widget shows the most
 | **Antigravity** (`agy`) | Real 5h + weekly **% used** (Gemini + Claude/GPT groups) | `agy` local loopback RPC `RetrieveUserQuotaSummary` | Live while `agy` runs; shows last-seen otherwise. Undocumented, localhost-only |
 | **Codex** | **Token counts** (today / window) + est. cost | `~/.codex/sessions/**/rollout-*.jsonl` | Business/credit plans expose **no** 5h/weekly windows, so tokens are the metric |
 | **Gemini CLI** | Token counts (disabled by default) | `~/.gemini/tmp/*/chats/session-*.json` | **Deprecated** — Google stopped serving AI Pro/free on 2026-06-18. Use Antigravity instead |
+| **RTK** (`rtk`) | **Tokens saved** (lifetime) + avg % + command count | `rtk gain -f json` (subprocess) | **Opt-in** (disabled by default). A *combined* total — [rtk](https://github.com/rtk-ai/rtk) stores no per-harness attribution, so gain isn't split by agent. Silently hidden if `rtk` isn't installed |
 
 There is no single universal "% of limit" — only Claude and Antigravity expose rolling windows. Codex (on business/credit plans) and the retired Gemini CLI only expose token consumption.
 
@@ -66,6 +67,7 @@ Edit `~/.config/ai-usage-widget/config.json` (or click **Edit config** in the me
 - `harnesses.<name>.label` — display name.
 - `harnesses.codex|gemini.window_days` — token window (default 7).
 - `harnesses.codex|gemini.pricing` — `$/1M tokens` for the cost estimate (edit per model prefix).
+- `harnesses.rtk.enabled` — opt-in RTK token-savings section (needs the `rtk` binary on `PATH`).
 - `thresholds.warn` / `.critical` — % at which bars turn amber / red.
 - `colors`, `stale_minutes`, `menubar.label`.
 

@@ -34,6 +34,11 @@
       "pricing": {
         "_default": { "in": 1.25, "cached": 0.31, "out": 10.0 }
       }
+    },
+
+    "rtk": {
+      "enabled": false,
+      "label": "RTK · Token Killer"
     }
   },
 
