@@ -1,12 +1,17 @@
-# ai-usage-widget telemetry sink
+# ai-usage-widget telemetry gateway
 
-A tiny Cloudflare Worker that receives the **opt-in** install ping from
-`install.sh` and forwards it to **PostHog**. The installer asks the user first,
-so this Worker only ever gets a ping when they said yes.
+A tiny Cloudflare Worker with two jobs, forwarding to **PostHog**:
 
-Why a Worker (not a direct PostHog call): it strips the sender IP, adds coarse
-geo from Cloudflare, honors `DNT`/`Sec-GPC`, and decouples clients from the
-backend — swap PostHog projects without anyone re-installing.
+- `GET /install.sh` → serves the installer (relayed from GitHub) and logs an
+  **`install_intent`** at the edge, by default, with the raw request metadata
+  Cloudflare provides (geo, ASN, TLS, user-agent). This is the human-vs-bot
+  signal. Raw IP is never stored. Users who want zero edge logging install from
+  GitHub raw instead.
+- `POST /telemetry` → the **`install`** completion event, sent only after the
+  installer asks and the user says yes. Coarse geo only — matches the prompt.
+
+Why a Worker: strips the sender IP, adds geo from Cloudflare, honors
+`DNT`/`Sec-GPC`, and decouples clients from the backend.
 
 ## No secrets
 

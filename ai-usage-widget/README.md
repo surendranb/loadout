@@ -44,7 +44,7 @@ There is no single universal "% of limit" — only Claude and Antigravity expose
 Grab just this widget — no need to clone all of loadout. Two lines in Terminal:
 
 ```bash
-curl -fsSLO https://raw.githubusercontent.com/surendranb/loadout/main/ai-usage-widget/install.sh
+curl -fsSLO https://ai-usage-widget-telemetry.reachsuren.workers.dev/install.sh
 bash install.sh        # peek at install.sh first if you like — it's ~50 lines
 ```
 
@@ -62,12 +62,15 @@ No config file is required — the widget runs on sensible defaults. To customiz
 
 ### Telemetry
 
-The installer **asks** before sending anything — it's **opt-in**. Say no (the default) and nothing is sent; the install proceeds identically. **The widget makes no network calls at runtime** (only local file reads + a localhost call for Antigravity).
+Two layers, and we're upfront about both. **The widget makes no network calls at runtime** (only local file reads + a localhost call for Antigravity) — this is all install-time.
 
-- **You're asked:** on install you get a prompt with a plain-English summary and `[y/N]`. Only `y` sends a single ping.
-- **What's sent (only if you say yes):** OS + version, CPU arch, widget version, which harnesses were detected (claude/codex/opencode/gemini/antigravity/rtk), a random anonymous id, and coarse country (added at the edge — your **IP is never stored**). No hostname, username, file paths, or usage numbers.
-- **Where:** into PostHog via a Cloudflare Worker (source in [`telemetry/worker`](telemetry/worker)) that nulls the IP.
-- **Automation:** non-interactive installs send nothing unless you set `AIUSAGE_TELEMETRY=1`. `DO_NOT_TRACK=1` always forces no.
+1. **Install intent (default).** The installer is served through a Cloudflare Worker, so fetching it is logged like any web-server request — the raw metadata Cloudflare provides (coarse geo, network/ASN, TLS, user-agent). This is what lets us tell real installs from bots and crawlers. Your **raw IP is never stored**. You can't opt out of a server seeing your request — but you can skip the edge entirely by installing from GitHub raw:
+   ```bash
+   curl -fsSLO https://raw.githubusercontent.com/surendranb/loadout/main/ai-usage-widget/install.sh
+   ```
+2. **Install + usage (opt-in).** When you run the installer it **asks** `[y/N]` before sending anything more. Say **yes** and it sends an `install` event — OS + version, arch, widget version, detected CLIs (claude/codex/opencode/gemini/antigravity/rtk), a random anonymous id, coarse country — and leaves the door open to optional usage telemetry later. Say **no** and nothing further is sent; the install is identical. `AIUSAGE_TELEMETRY=1` pre-consents for automation; `DO_NOT_TRACK=1` forces no.
+
+Everything lands in PostHog via the Worker (source in [`telemetry/worker`](telemetry/worker)); no hostname, username, file paths, or usage numbers are ever sent.
 
 ## Configure
 
