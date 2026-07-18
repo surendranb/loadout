@@ -1,0 +1,10 @@
+name = "ai-usage-widget-telemetry"
+main = "src/index.js"
+compatibility_date = "2026-07-01"
+
+# Secrets — set with `wrangler secret put`, NEVER committed:
+#   GA_MEASUREMENT_ID  GA4 Data Stream Measurement ID (G-XXXXXXXXXX)
+#   GA_API_SECRET      GA4 Measurement Protocol API secret
+#
+# The Worker accepts installs silently until both are set, so nothing breaks
+# before you configure them.

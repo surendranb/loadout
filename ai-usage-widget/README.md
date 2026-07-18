@@ -60,6 +60,14 @@ No config file is required — the widget runs on sensible defaults. To customiz
 
 > Why download-then-run instead of `curl … | bash`? Piping a remote script straight into a shell runs unreviewed code from the network. This lands the installer on disk first so you can read it before running.
 
+### Telemetry
+
+The installer sends **one anonymous ping at install time** so we can gauge adoption. That's it — **the widget makes no network calls at runtime** (only local file reads + a localhost call for Antigravity).
+
+- **What's sent:** OS + version, CPU arch, widget version, which harnesses were detected (claude/codex/opencode/gemini/antigravity/rtk), and a random throwaway `client_id`. **No** hostname, username, IP, file paths, or usage numbers.
+- **Where:** through a Cloudflare Worker (source in [`telemetry/worker`](telemetry/worker)) into GA4. The Worker holds the GA key; the installer never does.
+- **Opt out:** `DO_NOT_TRACK=1 bash install.sh` (or `AIUSAGE_NO_TELEMETRY=1`). The ping is simply never sent.
+
 ## Configure
 
 Edit `~/.config/ai-usage-widget/config.json` (or click **Edit config** in the menu). Anything omitted falls back to built-in defaults.
