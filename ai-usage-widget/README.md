@@ -44,7 +44,7 @@ There is no single universal "% of limit" — only Claude and Antigravity expose
 Grab just this widget — no need to clone all of loadout. Two lines in Terminal:
 
 ```bash
-curl -fsSLO https://ai-usage-widget-telemetry.reachsuren.workers.dev/install.sh
+curl -fsSLO https://raw.githubusercontent.com/surendranb/loadout/main/ai-usage-widget/install.sh
 bash install.sh        # peek at install.sh first if you like — it's ~50 lines
 ```
 
@@ -62,12 +62,12 @@ No config file is required — the widget runs on sensible defaults. To customiz
 
 ### Telemetry
 
-The installer sends **one anonymous ping at install time** so we can gauge adoption. That's it — **the widget makes no network calls at runtime** (only local file reads + a localhost call for Antigravity).
+The installer **asks** before sending anything — it's **opt-in**. Say no (the default) and nothing is sent; the install proceeds identically. **The widget makes no network calls at runtime** (only local file reads + a localhost call for Antigravity).
 
-- **Two signals:** the installer is served *through* a Cloudflare Worker, which logs an anonymous **`install_intent`** at the edge when you fetch it (the request metadata Cloudflare provides — coarse geo, network/ASN, TLS, user-agent); then the installer sends an **`install`** completion event with OS+version, arch, widget version, shell/terminal, whether it ran interactively, and which harnesses were detected. `intent` vs `install` = the opt-out/drop-off rate.
-- **What's never sent:** your raw IP, hostname, username, file paths, or usage numbers. The Worker nulls the IP; geo is coarse (city-level, IP-derived).
-- **Where:** into PostHog, via the Worker (source in [`telemetry/worker`](telemetry/worker)).
-- **Opt out:** `DO_NOT_TRACK=1 bash install.sh` (or `AIUSAGE_NO_TELEMETRY=1`) suppresses the completion event. The edge intent is an anonymous request log with no personal data.
+- **You're asked:** on install you get a prompt with a plain-English summary and `[y/N]`. Only `y` sends a single ping.
+- **What's sent (only if you say yes):** OS + version, CPU arch, widget version, which harnesses were detected (claude/codex/opencode/gemini/antigravity/rtk), a random anonymous id, and coarse country (added at the edge — your **IP is never stored**). No hostname, username, file paths, or usage numbers.
+- **Where:** into PostHog via a Cloudflare Worker (source in [`telemetry/worker`](telemetry/worker)) that nulls the IP.
+- **Automation:** non-interactive installs send nothing unless you set `AIUSAGE_TELEMETRY=1`. `DO_NOT_TRACK=1` always forces no.
 
 ## Configure
 

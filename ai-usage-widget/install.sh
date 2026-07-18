@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # One-step installer for the AI Usage menu-bar widget.
 # Network steps: an optional Homebrew install of SwiftBar, fetching the plugin
-# when run standalone, and ONE anonymous install ping (opt out: DO_NOT_TRACK=1).
-# The installed widget itself makes no network calls at runtime.
+# when run standalone, and — only if you opt in when asked — one anonymous
+# install ping. The installed widget itself makes no network calls at runtime.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -66,17 +66,33 @@ open -a SwiftBar 2>/dev/null || true
 echo "Done — look for the widget in your menu bar (e.g. \"AI 24%\")."
 echo "Customize (optional): create $DEST/config.json — see config.example.json."
 
-# 5. One-time anonymous install ping (→ Cloudflare Worker → PostHog). No PII:
-#    no hostname/username/IP/paths. anonymous_id is a random UUID persisted to
-#    disk so re-runs/updates don't double-count. Opt out with DO_NOT_TRACK=1 or
-#    AIUSAGE_NO_TELEMETRY=1. Wrapped in `set +e` so it can never break install.
+# 5. Anonymous install analytics — OPT-IN. We ASK first and send nothing unless
+#    you say yes; the install completes either way. Non-interactive runs send
+#    nothing (pre-consent with AIUSAGE_TELEMETRY=1). DO_NOT_TRACK=1 forces no.
+#    `set +e` so telemetry can never break the install.
 set +e
 TELEMETRY_URL="${AIUSAGE_TELEMETRY_URL:-https://ai-usage-widget-telemetry.reachsuren.workers.dev/telemetry}"
+CONSENT="no"
 if [ -n "${DO_NOT_TRACK:-}" ] || [ -n "${AIUSAGE_NO_TELEMETRY:-}" ]; then
-  echo "Telemetry: skipped (opted out)."
-else
-  echo "Telemetry: sending one anonymous install ping (opt out next time with DO_NOT_TRACK=1)."
-  # Persistent anonymous install id (random, no PII).
+  CONSENT="no"
+elif [ "${AIUSAGE_TELEMETRY:-}" = "1" ]; then
+  CONSENT="yes"
+elif [ -t 0 ] && [ -t 1 ]; then
+  echo ""
+  echo "── Anonymous install analytics (optional) ──────────────────"
+  echo "  If you say yes, we send ONE ping: OS + version, CPU arch, this"
+  echo "  widget's version, which AI CLIs you use (claude/codex/opencode/…),"
+  echo "  and coarse country. No IP, username, hostname, or file contents."
+  echo "  Why: to see how many people install, and on what setups."
+  echo "  Say no and the install continues exactly the same."
+  echo "────────────────────────────────────────────────────────────"
+  printf "Send one anonymous install ping? [y/N] "
+  read -r ANS
+  case "$ANS" in [yY] | [yY][eE][sS]) CONSENT="yes" ;; esac
+fi
+
+if [ "$CONSENT" = "yes" ]; then
+  # Persistent anonymous id (random, no PII) so re-runs don't double-count.
   ANON_ID="$(cat "$DEST/installation_id" 2>/dev/null || true)"
   if [ -z "$ANON_ID" ]; then
     ANON_ID="inst_$(uuidgen 2>/dev/null | tr 'A-Z' 'a-z')"
@@ -91,11 +107,13 @@ else
   { command -v agy >/dev/null 2>&1 || [ -x "$HOME/.local/bin/agy" ]; } && add antigravity
   command -v rtk >/dev/null 2>&1 && add rtk
   VER="$(grep -oE '<xbar.version>[^<]+' "$DEST/aiusage.py" 2>/dev/null | head -1 | sed 's/.*>//')"
-  EXEC_MODE="agent_headless"; { [ -t 0 ] && [ -t 1 ]; } && EXEC_MODE="human_interactive"
   PAYLOAD="$(cat <<JSONEOF
-{"anonymous_id":"$ANON_ID","widget_version":"$VER","os_name":"$(uname -s)","os_version":"$(sw_vers -productVersion 2>/dev/null || echo '?')","arch":"$(uname -m)","shell_type":"$(basename "${SHELL:-bash}")","terminal_app":"${TERM_PROGRAM:-unknown}","execution_mode":"$EXEC_MODE","harnesses_detected":[$H],"swiftbar":true,"install_outcome":"success"}
+{"anonymous_id":"$ANON_ID","widget_version":"$VER","os_name":"$(uname -s)","os_version":"$(sw_vers -productVersion 2>/dev/null || echo '?')","arch":"$(uname -m)","harnesses_detected":[$H],"swiftbar":true}
 JSONEOF
 )"
-  curl -fsS -m 3 -X POST "$TELEMETRY_URL" -H 'content-type: application/json' -d "$PAYLOAD" >/dev/null 2>&1 || true
+  curl -fsS -m 3 -X POST "$TELEMETRY_URL" -H 'content-type: application/json' -d "$PAYLOAD" >/dev/null 2>&1 \
+    && echo "Thanks — anonymous ping sent." || true
+else
+  echo "No telemetry sent."
 fi
 set -e
