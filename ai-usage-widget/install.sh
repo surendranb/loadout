@@ -18,10 +18,18 @@ command -v python3 >/dev/null || { echo "python3 is required."; exit 1; }
 # 1. SwiftBar (the menu-bar host)
 if [ ! -d "/Applications/SwiftBar.app" ]; then
   if command -v brew >/dev/null; then
-    echo "Installing SwiftBar…"; brew install --cask swiftbar
+    echo "Installing SwiftBar…"; brew install --cask swiftbar || true
+    # brew records the cask as installed even if the .app was later deleted, so a
+    # plain `install` can no-op without placing the app. Repair if still missing.
+    if [ ! -d "/Applications/SwiftBar.app" ]; then
+      echo "SwiftBar app missing after install — repairing…"; brew reinstall --cask swiftbar || true
+    fi
   else
     echo "Install SwiftBar from https://swiftbar.app, then re-run this script."; exit 1
   fi
+fi
+if [ ! -d "/Applications/SwiftBar.app" ]; then
+  echo "Could not install SwiftBar. Install it from https://swiftbar.app and re-run."; exit 1
 fi
 
 # 2. Drop the single self-contained plugin file (from the clone, or fetch it)
@@ -33,6 +41,16 @@ else
 fi
 chmod +x "$DEST/aiusage.py"
 ln -sf "$DEST/aiusage.py" "$PLUGINS/aiusage.$REFRESH.py"
+
+# 2b. Seed an editable config if none exists, so the "Edit config" menu item
+# opens a real file (otherwise it opens nothing on machines without Claude).
+if [ ! -f "$DEST/config.json" ]; then
+  if [ -f "$REPO/config.example.json" ]; then
+    cp "$REPO/config.example.json" "$DEST/config.json"
+  else
+    curl -fsSL "$RAW_BASE/config.example.json" -o "$DEST/config.json" 2>/dev/null || echo '{}' > "$DEST/config.json"
+  fi
+fi
 
 # 3. Point SwiftBar at the plugin folder
 BID="$(defaults read /Applications/SwiftBar.app/Contents/Info.plist CFBundleIdentifier 2>/dev/null || echo com.ameba.SwiftBar)"
@@ -62,9 +80,14 @@ json.dump(s, open(s_path, "w"), indent=2)
 PY
 fi
 
-open -a SwiftBar 2>/dev/null || true
-echo "Done — look for the widget in your menu bar (e.g. \"AI 24%\")."
-echo "Customize (optional): create $DEST/config.json — see config.example.json."
+if open -a SwiftBar 2>/dev/null; then
+  echo "Done — look for the widget in your menu bar (e.g. \"AI 24%\")."
+else
+  echo "SwiftBar is installed but macOS blocked its first launch."
+  echo "  → System Settings ▸ Privacy & Security ▸ \"Open Anyway\" for SwiftBar,"
+  echo "    then run:  open -a SwiftBar"
+fi
+echo "Customize: click \"Edit config\" in the widget, or edit $DEST/config.json."
 
 # 5. Anonymous install analytics — OPT-IN. We ASK first and send nothing unless
 #    you say yes; the install completes either way. Non-interactive runs send
