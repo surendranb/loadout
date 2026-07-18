@@ -1,10 +1,11 @@
 name = "ai-usage-widget-telemetry"
 main = "src/index.js"
 compatibility_date = "2026-07-01"
+workers_dev = true
 
-# Secrets — set with `wrangler secret put`, NEVER committed:
-#   GA_MEASUREMENT_ID  GA4 Data Stream Measurement ID (G-XXXXXXXXXX)
-#   GA_API_SECRET      GA4 Measurement Protocol API secret
-#
-# The Worker accepts installs silently until both are set, so nothing breaks
-# before you configure them.
+# PostHog project key is write-only and safe to expose (same as the GA4-MCP
+# telemetry worker) — no secrets to manage. Swap these to point at a different
+# PostHog project.
+[vars]
+POSTHOG_API_KEY = "phc_Aik6H3pf5P9dPBrWLjd6N3wzsVAD6tJnmmEhFwW8Pzsi"
+POSTHOG_HOST = "https://us.i.posthog.com"

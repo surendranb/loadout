@@ -66,15 +66,22 @@ open -a SwiftBar 2>/dev/null || true
 echo "Done — look for the widget in your menu bar (e.g. \"AI 24%\")."
 echo "Customize (optional): create $DEST/config.json — see config.example.json."
 
-# 5. One-time anonymous install ping. No PII (no hostname/username/IP/paths);
-#    client_id is a throwaway UUID. Opt out with DO_NOT_TRACK=1 or
+# 5. One-time anonymous install ping (→ Cloudflare Worker → PostHog). No PII:
+#    no hostname/username/IP/paths. anonymous_id is a random UUID persisted to
+#    disk so re-runs/updates don't double-count. Opt out with DO_NOT_TRACK=1 or
 #    AIUSAGE_NO_TELEMETRY=1. Wrapped in `set +e` so it can never break install.
 set +e
-TELEMETRY_URL="${AIUSAGE_TELEMETRY_URL:-https://ai-usage-widget-telemetry.reachsuren.workers.dev}"
+TELEMETRY_URL="${AIUSAGE_TELEMETRY_URL:-https://ai-usage-widget-telemetry.reachsuren.workers.dev/telemetry}"
 if [ -n "${DO_NOT_TRACK:-}" ] || [ -n "${AIUSAGE_NO_TELEMETRY:-}" ]; then
   echo "Telemetry: skipped (opted out)."
 else
   echo "Telemetry: sending one anonymous install ping (opt out next time with DO_NOT_TRACK=1)."
+  # Persistent anonymous install id (random, no PII).
+  ANON_ID="$(cat "$DEST/installation_id" 2>/dev/null || true)"
+  if [ -z "$ANON_ID" ]; then
+    ANON_ID="inst_$(uuidgen 2>/dev/null | tr 'A-Z' 'a-z')"
+    printf '%s' "$ANON_ID" > "$DEST/installation_id" 2>/dev/null || true
+  fi
   H=""
   add() { H="${H:+$H,}\"$1\""; }
   [ -d "$HOME/.claude" ] && add claude
@@ -84,9 +91,11 @@ else
   { command -v agy >/dev/null 2>&1 || [ -x "$HOME/.local/bin/agy" ]; } && add antigravity
   command -v rtk >/dev/null 2>&1 && add rtk
   VER="$(grep -oE '<xbar.version>[^<]+' "$DEST/aiusage.py" 2>/dev/null | head -1 | sed 's/.*>//')"
-  CID="$(uuidgen 2>/dev/null | tr 'A-Z' 'a-z')"
-  OSV="macOS $(sw_vers -productVersion 2>/dev/null || echo '?')"
-  PAYLOAD="{\"client_id\":\"$CID\",\"os\":\"$OSV\",\"arch\":\"$(uname -m)\",\"widget_version\":\"$VER\",\"harnesses\":[$H],\"swiftbar\":true}"
+  EXEC_MODE="agent_headless"; { [ -t 0 ] && [ -t 1 ]; } && EXEC_MODE="human_interactive"
+  PAYLOAD="$(cat <<JSONEOF
+{"anonymous_id":"$ANON_ID","widget_version":"$VER","os_name":"$(uname -s)","os_version":"$(sw_vers -productVersion 2>/dev/null || echo '?')","arch":"$(uname -m)","shell_type":"$(basename "${SHELL:-bash}")","terminal_app":"${TERM_PROGRAM:-unknown}","execution_mode":"$EXEC_MODE","harnesses_detected":[$H],"swiftbar":true,"install_outcome":"success"}
+JSONEOF
+)"
   curl -fsS -m 3 -X POST "$TELEMETRY_URL" -H 'content-type: application/json' -d "$PAYLOAD" >/dev/null 2>&1 || true
 fi
 set -e

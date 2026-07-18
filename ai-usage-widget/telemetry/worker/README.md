@@ -1,20 +1,26 @@
 # ai-usage-widget telemetry relay
 
 A tiny Cloudflare Worker that receives the **one-time anonymous install ping**
-from `install.sh` and forwards it to GA4 via the Measurement Protocol.
+from `install.sh` and forwards it to **PostHog**. Same pattern as the GA4-MCP
+telemetry worker.
 
-Why a Worker: the GA4 **API secret stays here** (a Worker secret), never in the
-public installer. The Worker also adds coarse country (from Cloudflare) and
-enforces an allow-list so only known fields ever reach GA.
+Why a Worker (not a direct PostHog call): it strips the sender IP, stamps coarse
+geo (from Cloudflare), honors `DNT`/`Sec-GPC`, and decouples installed clients
+from the backend — swap PostHog projects without anyone re-installing.
 
-## What it sends to GA4
+## No secrets
 
-Event `install` with params: `os`, `arch`, `widget_version`, `harnesses`
-(comma-separated: which of claude/codex/opencode/gemini/agy/rtk were detected),
-`swiftbar`, `country`. `client_id` is a random per-install UUID.
+The PostHog project key is **write-only and safe to expose**, so it lives in
+`wrangler.toml` `[vars]` (`POSTHOG_API_KEY`, `POSTHOG_HOST`). Nothing to
+`wrangler secret put`. To use a different PostHog project, edit those vars.
 
-No IP, hostname, username, or paths. Users opt out with `DO_NOT_TRACK=1` or
-`AIUSAGE_NO_TELEMETRY=1` (the ping is simply never sent).
+## What it sends
+
+Event `install` (property `product: "ai-usage-widget"`), `distinct_id` = the
+persistent random `inst_<uuid>` the installer mints. Properties: `widget_version`,
+`os_name`/`os_version`, `arch`, `shell_type`, `terminal_app`, `execution_mode`
+(human vs headless agent), `harnesses_detected`, plus edge-added coarse geo.
+IP is dropped. Opt out with `DO_NOT_TRACK=1` / `AIUSAGE_NO_TELEMETRY=1`.
 
 ## Deploy
 
@@ -23,25 +29,12 @@ cd telemetry/worker
 npx wrangler deploy
 ```
 
-## Configure the two GA secrets (never committed)
-
-Create these in GA4 Admin → Data Streams → your stream → **Measurement
-Protocol API secrets**, then:
-
-```bash
-npx wrangler secret put GA_MEASUREMENT_ID   # e.g. G-XXXXXXXXXX
-npx wrangler secret put GA_API_SECRET       # the Measurement Protocol secret
-```
-
-Until both are set, the Worker accepts pings and drops them (installs never
-break).
-
 ## Test
 
 ```bash
-curl -s -X POST https://<your-worker-url> \
+curl -s -X POST https://<your-worker-url>/telemetry \
   -H 'content-type: application/json' \
-  -d '{"client_id":"test-uuid","os":"macOS 15.6","arch":"arm64",
-       "widget_version":"1.1","harnesses":["claude","opencode"],"swiftbar":true}'
-# expect: HTTP 204. Confirm in GA4 Admin → DebugView / Realtime.
+  -d '{"anonymous_id":"inst_test","widget_version":"1.1","os_name":"Darwin",
+       "arch":"arm64","harnesses_detected":["claude","opencode"],"swiftbar":true}'
+# expect: {"recorded":true}. Confirm in PostHog → Activity / the `install` event.
 ```
