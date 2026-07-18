@@ -1,6 +1,6 @@
 # AI Usage — menu-bar widget
 
-A [SwiftBar](https://swiftbar.app) / [xbar](https://xbarapp.com) plugin that shows your AI coding-agent usage in the macOS menu bar: **Claude Code**, **Antigravity** (`agy`), and **Codex**.
+A [SwiftBar](https://swiftbar.app) / [xbar](https://xbarapp.com) plugin that shows your AI coding-agent usage in the macOS menu bar: **Claude Code**, **Antigravity** (`agy`), **Codex**, and **OpenCode**.
 
 All data is read from **local files only** — no network calls, no credentials, no tokens leave your machine.
 
@@ -33,6 +33,7 @@ Different tools expose very different things locally. This widget shows the most
 | **Claude Code** | Real 5h + weekly **% used** + reset times | `statusLine` stdin `rate_limits` (v2.1.80+) | Fresh only while a Claude session is running |
 | **Antigravity** (`agy`) | Real 5h + weekly **% used** (Gemini + Claude/GPT groups) | `agy` local loopback RPC `RetrieveUserQuotaSummary` | Live while `agy` runs; shows last-seen otherwise. Undocumented, localhost-only |
 | **Codex** | **Token counts** (today / window) + est. cost | `~/.codex/sessions/**/rollout-*.jsonl` | Business/credit plans expose **no** 5h/weekly windows, so tokens are the metric |
+| **OpenCode** | **Token counts** (today / window) + **exact cost** | `~/.local/share/opencode/storage/message/**/*.json` | opencode records real per-message cost, so the `$` shown is exact (not estimated). Multi-provider — shows the most-recent model |
 | **Gemini CLI** | Token counts (disabled by default) | `~/.gemini/tmp/*/chats/session-*.json` | **Deprecated** — Google stopped serving AI Pro/free on 2026-06-18. Use Antigravity instead |
 | **RTK** (`rtk`) | **Tokens saved** (lifetime) + avg % + command count | `rtk gain -f json` (subprocess) | **Opt-in** (disabled by default). A *combined* total — [rtk](https://github.com/rtk-ai/rtk) stores no per-harness attribution, so gain isn't split by agent. Silently hidden if `rtk` isn't installed |
 

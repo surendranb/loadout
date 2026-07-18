@@ -36,6 +36,13 @@
       }
     },
 
+    "opencode": {
+      "enabled": true,
+      "label": "OpenCode",
+      "window_days": 7,
+      "show_cost": true
+    },
+
     "rtk": {
       "enabled": false,
       "label": "RTK · Token Killer"

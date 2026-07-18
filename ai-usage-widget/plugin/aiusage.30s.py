@@ -35,6 +35,7 @@ CLAUDE_CACHE = os.path.join(HOME, ".cache", "ai-usage-widget", "claude.json")
 ANTIGRAVITY_CACHE = os.path.join(HOME, ".cache", "ai-usage-widget", "antigravity.json")
 CODEX_SESSIONS = os.path.join(HOME, ".codex", "sessions")
 GEMINI_CHATS_GLOB = os.path.join(HOME, ".gemini", "tmp", "*", "chats", "session-*.json")
+OPENCODE_STORAGE = os.path.join(HOME, ".local", "share", "opencode", "storage")
 
 DEFAULTS = {
     "menubar": {"label": "AI", "icon": "gauge.medium"},  # icon = any SF Symbol name
@@ -58,6 +59,14 @@ DEFAULTS = {
             "window_days": 7,
             "show_cost": True,
             "pricing": {"_default": {"in": 1.25, "cached": 0.31, "out": 10.0}},
+        },
+        # OpenCode token totals + REAL cost (opencode records per-message cost
+        # itself, so no pricing table needed). Read from local storage JSON.
+        "opencode": {
+            "enabled": True,
+            "label": "OpenCode",
+            "window_days": 7,
+            "show_cost": True,
         },
         # RTK (Rust Token Killer) proxy savings. Opt-in: shows the *combined*
         # lifetime gain from `rtk gain` (rtk has no per-harness attribution —
@@ -409,6 +418,55 @@ def read_gemini(window_days):
 
 
 # ---------------------------------------------------------------------------
+# OpenCode — sum per-assistant-message tokens + the real per-message cost that
+# opencode records itself. Storage: ~/.local/share/opencode/storage/message/
+# <session>/<msg>.json. Multi-provider, so we show the most-recent model.
+# ---------------------------------------------------------------------------
+def read_opencode(window_days):
+    today = dt.date.today()
+    cutoff = today - dt.timedelta(days=window_days - 1)
+    agg = {"today": empty_row(), "window": empty_row()}
+    cost = 0.0
+    model = last_active = None
+    latest_ts = 0
+
+    for path in glob.glob(os.path.join(OPENCODE_STORAGE, "message", "*", "*.json")):
+        try:
+            with open(path, errors="ignore") as f:
+                d = json.load(f)
+        except Exception:
+            continue
+        if d.get("role") != "assistant":
+            continue
+        tk = d.get("tokens")
+        created = (d.get("time") or {}).get("created")
+        if not isinstance(tk, dict) or not created:
+            continue
+        if created > latest_ts:
+            latest_ts = created
+            model = f"{d.get('providerID', '')}/{d.get('modelID', '')}".strip("/")
+        day = dt.datetime.fromtimestamp(created / 1000).date()
+        if last_active is None or day > last_active:
+            last_active = day
+        if day < cutoff:
+            continue
+        cache = tk.get("cache") or {}
+        row = {
+            "in": tk.get("input", 0) or 0,
+            "out": (tk.get("output", 0) or 0) + (tk.get("reasoning", 0) or 0),
+            "cached": (cache.get("read", 0) or 0) + (cache.get("write", 0) or 0),
+        }
+        row["total"] = row["in"] + row["out"] + row["cached"]
+        for k in row:
+            agg["window"][k] += row[k]
+            if day == today:
+                agg["today"][k] += row[k]
+        cost += d.get("cost", 0) or 0
+
+    return {"agg": agg, "cost": cost, "model": model, "last_active": last_active}
+
+
+# ---------------------------------------------------------------------------
 # RTK — combined token-savings summary from the `rtk gain` proxy analytics.
 # rtk stores every proxied command in one DB with no source/harness column, so
 # this is a single lifetime total across whatever routes through rtk (on this
@@ -481,6 +539,8 @@ def render_tokens(name, C, hconf, data, note=None):
         cr = data.get("credits") or {}
         suffix = " · unlimited credits" if cr.get("unlimited") else (" · has credits" if cr.get("has_credits") else "")
         header = f"{label} · {data['plan']}{suffix}"
+    elif name == "opencode" and data.get("model"):
+        header = f"{label} · {data['model']}"
     print(f"{header} | color={C['fg']}")
 
     wd = hconf.get("window_days", 7)
@@ -492,8 +552,12 @@ def render_tokens(name, C, hconf, data, note=None):
         f" | font=Menlo size=11 color={C['dim']}"
     )
     if hconf.get("show_cost", True):
-        c = cost_of(w, hconf.get("pricing", {}), data.get("model", ""))
-        print(f"est. {wd}d cost ~${c:.2f}  (approx) | size=11 color={C['dim']}")
+        if data.get("cost") is not None:
+            # opencode reports real per-message cost — show it exactly.
+            print(f"{wd}d cost ${data['cost']:.2f} | size=11 color={C['dim']}")
+        else:
+            c = cost_of(w, hconf.get("pricing", {}), data.get("model", ""))
+            print(f"est. {wd}d cost ~${c:.2f}  (approx) | size=11 color={C['dim']}")
     la = data.get("last_active")
     if not w["total"] and la:
         print(f"last active {days_ago_str(la)} | size=11 color={C['dim']}")
@@ -576,6 +640,13 @@ def main():
             print("---")
         cx = read_codex(H["codex"].get("window_days", 7))
         render_tokens("codex", C, H["codex"], cx, note="No 5h/weekly limits on this plan (credit-based)")
+        first = False
+
+    if H.get("opencode", {}).get("enabled", True) and os.path.isdir(OPENCODE_STORAGE):
+        if not first:
+            print("---")
+        oc = read_opencode(H["opencode"].get("window_days", 7))
+        render_tokens("opencode", C, H["opencode"], oc)
         first = False
 
     if H.get("gemini", {}).get("enabled", True) and glob.glob(GEMINI_CHATS_GLOB):
